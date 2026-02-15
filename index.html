@@ -1,726 +1,1114 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Редактор синонимов штрихкодов</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='80'%3E🔗%3C/text%3E%3C/svg%3E" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Arial,sans-serif; background:#f2f2f7; padding:16px; color:#1c1c1e; }
-        .container { max-width:1400px; margin:0 auto; background:white; border-radius:16px; padding:24px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
-        h1 { font-size:28px; font-weight:600; margin-bottom:20px; color:#1c1c1e; letter-spacing:-0.5px; }
-        .upload-section { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px; }
-        .upload-card { background:#fff9e6; border-radius:12px; padding:12px; border:2px dashed #ffcc00; transition:all 0.2s; }
-        .upload-card:hover { border-color:#ff9500; }
-        .upload-label { display:block; font-size:12px; font-weight:600; color:#ff9500; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
-        .file-input-wrapper { position:relative; }
-        .file-input-wrapper input[type="file"] { position:absolute; opacity:0; width:100%; height:100%; cursor:pointer; }
-        .file-input-display { display:flex; align-items:center; gap:6px; padding:8px 10px; background:white; border-radius:8px; font-size:13px; color:#ff9500; font-weight:500; cursor:pointer; transition:all 0.2s; }
-        .file-input-display:hover { background:#fff3e0; }
-        .search-box { margin-bottom:12px; }
-        .search-input { width:100%; padding:10px 12px; border:2px solid #e5e5ea; border-radius:10px; font-size:14px; font-family:inherit; transition:all 0.2s; }
-        .search-input:focus { outline:none; border-color:#007aff; background:#f0f7ff; }
-        .controls { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
-        .btn { padding:6px 10px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px; transition:all 0.2s; display:flex; align-items:center; gap:4px; line-height:1; white-space:nowrap; }
-        .btn span.icon { font-size:14px; }
-        .btn-primary { background:#007aff; color:white; }
-        .btn-primary:hover { background:#0051d5; transform:translateY(-1px); box-shadow:0 3px 8px rgba(0,122,255,0.25); }
-        .btn-success { background:#34c759; color:white; }
-        .btn-success:hover { background:#28a745; transform:translateY(-1px); box-shadow:0 3px 8px rgba(52,199,89,0.25); }
-        .btn-warning { background:#ff9500; color:white; }
-        .btn-warning:hover { background:#e08600; transform:translateY(-1px); box-shadow:0 3px 8px rgba(255,149,0,0.25); }
-        .btn-danger { background:#ff3b30; color:white; }
-        .btn-danger:hover { background:#d70015; }
-        .btn-secondary { background:#f9f9fb; color:#007aff; border:1px solid #e5e5ea; }
-        .btn-secondary:hover { background:#e8f4ff; }
-        .btn-secondary.active { background:#007aff; color:white; }
-        .btn:disabled { background:#e5e5ea; color:#aeaeb2; cursor:not-allowed; transform:none; }
-        .info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:12px; }
-        .info-card { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); border-radius:12px; padding:10px; color:white; }
-        .info-card:nth-child(2){background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);}
-        .info-card:nth-child(3){background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);}
-        .info-card:nth-child(4){background:linear-gradient(135deg,#ff9500 0%,#ff5e62 100%);}
-        .info-value { font-size:22px; font-weight:700; margin-bottom:2px; letter-spacing:-0.5px; }
-        .info-label { font-size:11px; opacity:0.9; font-weight:500; }
-        .groups-container { display:grid; gap:12px; margin-bottom:12px; }
-        .group-card { background:#f9f9fb; border-radius:12px; padding:12px; border:2px solid #e5e5ea; transition:all 0.2s; }
-        .group-card:hover { border-color:#c7c7cc; }
-        .group-card.has-conflict { border-color:#ff3b30; background:#fff5f5; }
-        .group-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px; }
-        .group-main-info { flex:1; min-width:0; }
-        .group-barcode { font-size:16px; font-weight:700; color:#1c1c1e; margin-bottom:4px; font-family:'Courier New',monospace; }
-        .group-name { font-size:13px; color:#8e8e93; margin-bottom:6px; }
-        .group-name input { width:100%; padding:4px 8px; border:1px solid #e5e5ea; border-radius:6px; font-size:13px; font-family:inherit; }
-        .group-name input:focus { outline:none; border-color:#007aff; }
-        .group-actions { display:flex; gap:4px; }
-        .group-btn { padding:4px 8px; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; transition:all 0.2s; }
-        .group-btn-delete { background:#ff3b30; color:white; }
-        .group-btn-delete:hover { background:#d70015; }
-        .synonyms-list { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
-        .synonym-tag { display:flex; align-items:center; gap:4px; padding:4px 8px; background:#e8f4ff; border:1px solid #c7ddff; border-radius:6px; font-size:12px; font-family:'Courier New',monospace; }
-        .synonym-tag.conflict { background:#ffe6e6; border-color:#ff3b30; }
-        .synonym-remove { border:none; background:none; color:#ff3b30; cursor:pointer; font-size:14px; line-height:1; padding:0; margin-left:2px; }
-        .synonym-remove:hover { color:#d70015; }
-        .add-synonym { display:flex; gap:4px; }
-        .add-synonym input { flex:1; padding:4px 8px; border:1px solid #e5e5ea; border-radius:6px; font-size:12px; font-family:'Courier New',monospace; }
-        .add-synonym input:focus { outline:none; border-color:#007aff; }
-        .add-synonym button { padding:4px 12px; border:none; border-radius:6px; background:#34c759; color:white; font-size:12px; font-weight:600; cursor:pointer; }
-        .add-synonym button:hover { background:#28a745; }
-        .conflict-warning { background:#ffe6e6; color:#ff3b30; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:600; margin-top:4px; }
-        .add-group-section { background:#f0fdf4; border-radius:12px; padding:12px; border:2px dashed #34c759; margin-bottom:12px; }
-        .add-group-title { font-size:13px; font-weight:600; color:#34c759; margin-bottom:8px; }
-        .add-group-form { display:grid; gap:8px; }
-        .add-group-form input { padding:8px 10px; border:1px solid #e5e5ea; border-radius:8px; font-size:13px; font-family:inherit; }
-        .add-group-form input:focus { outline:none; border-color:#34c759; }
-        .add-group-form textarea { padding:8px 10px; border:1px solid #e5e5ea; border-radius:8px; font-size:12px; font-family:'Courier New',monospace; resize:vertical; min-height:60px; }
-        .add-group-form textarea:focus { outline:none; border-color:#34c759; }
-        .instructions-panel { display:none; margin-bottom:10px; padding:10px 12px; background:#f0f7ff; border-radius:10px; border:1px solid #c7ddff; font-size:12px; color:#1c1c1e; }
-        .instructions-panel h3 { font-size:13px; margin-bottom:4px; }
-        .instructions-panel ul { margin-left:16px; margin-bottom:6px; }
-        .instructions-panel li { margin-bottom:2px; }
-        .instructions-highlight { background:#e6f0ff; padding:4px 6px; border-radius:6px; margin-bottom:6px; }
-        .empty-state { text-align:center; padding:40px 20px; color:#8e8e93; }
-        .empty-state-icon { font-size:48px; margin-bottom:12px; }
-        .empty-state h3 { font-size:18px; font-weight:600; margin-bottom:6px; color:#1c1c1e; }
-        .empty-state p { font-size:13px; }
-        @media (max-width:768px){.info-grid{grid-template-columns:repeat(2,1fr);}}
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔗 Редактор синонимов штрихкодов</title>
+  <link rel="icon" href="data:image/svg+xml,<?xml version='1.0' encoding='UTF-8'?> <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='80'>🔗</text></svg>">
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
+      background: #f2f2f7;
+      padding: 10px;
+      color: #1c1c1e;
+    }
+    .container {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      letter-spacing: -0.2px;
+    }
+
+    /* topbar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 10px;
+      border: 1px solid #e5e5ea;
+      border-radius: 16px;
+      background: #fff;
+      margin-bottom: 10px;
+    }
+    .file-inline { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .file-input-wrapper { position: relative; flex: 0 0 auto; }
+    .file-input-wrapper input[type="file"] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .file-input-display {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      background: #fff;
+      border-radius: 14px;
+      font-size: 12px;
+      color: #ff9500;
+      font-weight: 900;
+      cursor: pointer;
+      transition: all .15s;
+      border: 1px solid rgba(255,149,0,0.30);
+      white-space: nowrap;
+      height: 30px;
+    }
+    .file-input-display:hover { background: #fff3e0; }
+    .status-inline {
+      font-size: 11px;
+      color: #8e8e93;
+      white-space: nowrap;
+      max-width: 360px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .controls { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0; flex: 0 0 auto; }
+
+    /* buttons */
+    .btn {
+      padding: 4px 10px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 11px;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+      height: 28px;
+    }
+    .btn span.icon { font-size: 13px; }
+    .btn-success { background: #34c759; color: #fff; }
+    .btn-success:hover { background: #28a745; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(52,199,89,0.25); }
+    .btn-warning { background: #ff9500; color: #fff; }
+    .btn-warning:hover { background: #e08600; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(255,149,0,0.25); }
+    .btn-danger { background: #ff3b30; color: #fff; }
+    .btn-danger:hover { background: #d70015; }
+    .btn-secondary { background: #f2f2f7; color: #1c1c1e; border: 1px solid #e5e5ea; }
+    .btn-secondary:hover { background: #e9e9ef; }
+    .btn:disabled { background: #e5e5ea; color: #aeaeb2; cursor: not-allowed; transform: none; box-shadow: none; border-color: transparent; }
+
+    /* info */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .info-card {
+      border-radius: 16px;
+      padding: 10px;
+      color: #fff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .info-card:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .info-card:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .info-card:nth-child(4) { background: linear-gradient(135deg, #ff9500 0%, #ff5e62 100%); }
+    .info-value { font-size: 20px; font-weight: 900; margin-bottom: 2px; letter-spacing: -0.3px; }
+    .info-label { font-size: 11px; opacity: .9; font-weight: 800; }
+
+    /* search */
+    .search-wide {
+      width: 100%;
+      padding: 8px 10px;
+      border: 2px solid #e5e5ea;
+      border-radius: 16px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: all .15s;
+      background: #fff;
+      height: 34px;
+      margin: 0 0 10px;
+    }
+    .search-wide:focus { outline: none; border-color: #007aff; background: #f0f7ff; }
+
+    /* shared grid */
+    .rows-wrap { width: 100%; overflow-x: auto; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 2fr 1.1fr 44px 110px;
+      gap: 8px;
+      align-items: center;
+      min-width: 1180px;
+    }
+    .grid > * { min-width: 0; }
+
+    /* inputs */
+    .inp {
+      height: 22px;
+      padding: 1px 8px;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      font-size: 12px;
+      font-family: inherit;
+      background: #fff;
+      min-width: 0;
+    }
+    .inp:focus { outline: none; border-color: #007aff; }
+    .inp-mono { font-family: "Courier New", monospace; font-weight: 900; letter-spacing: 0.2px; }
+    .inp-name { font-weight: 400; }
+
+    /* main barcode cell + loupe */
+    .main-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .main-cell .inp { flex: 1 1 auto; min-width: 0; }
+    .loupe-link {
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e5e5ea;
+      border-radius: 10px;
+      background: #fff;
+      color: #007aff;
+      text-decoration: none;
+      font-size: 12px;
+      line-height: 1;
+      user-select: none;
+    }
+    .loupe-link:hover { background: #f0f7ff; border-color: #007aff; }
+
+    /* synonyms */
+    .synonyms-cell {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 1px 2px;
+      height: 22px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .synonym-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 8px;
+      height: 20px;
+      background: #e8f4ff;
+      border: 1px solid #c7ddff;
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: "Courier New", monospace;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .synonym-pill.syn-link { cursor: pointer; }
+    .synonym-pill.syn-link:hover { background: #dff0ff; border-color: #9ec6ff; }
+    .row.has-conflict .synonym-pill { background: #ffe6e6; border-color: #ff3b30; }
+
+    .synonym-remove {
+      border: none;
+      background: none;
+      color: #ff3b30;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+      height: 16px;
+    }
+    .synonym-remove:hover { color: #d70015; }
+
+    /* disk button in row */
+    .btn-disk {
+      width: 44px;
+      min-width: 44px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 12px;
+      height: 22px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .btn-del {
+      height: 22px;
+      border-radius: 12px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .new-group {
+      background: #f0fdf4;
+      border: 2px dashed #34c759;
+      border-radius: 16px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      background: #f9f9fb;
+      border-radius: 16px;
+      padding: 8px 10px;
+      border: 2px solid #e5e5ea;
+      transition: all .15s;
+      margin-bottom: 8px;
+    }
+    .row:hover { border-color: #c7c7cc; }
+    .row.has-conflict { border-color: #ff3b30; background: #fff5f5; }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 18px;
+      color: #8e8e93;
+    }
+    .empty-state-icon { font-size: 44px; margin-bottom: 10px; }
+    .empty-state h3 { font-size: 16px; font-weight: 900; margin-bottom: 6px; color: #1c1c1e; }
+    .empty-state p { font-size: 13px; }
+  </style>
 </head>
+
 <body>
-<div class="container">
+  <div class="container">
     <h1>🔗 Редактор синонимов штрихкодов</h1>
 
-    <div class="upload-section">
-        <div class="upload-card">
-            <label class="upload-label">🧩 Файл синонимов (JSON)</label>
-            <div class="file-input-wrapper">
-                <input type="file" id="fileInput" accept=".json"/>
-                <div class="file-input-display" title="Загрузить файл synonyms.json">
-                    <span>📄 Выбрать synonyms.json</span>
-                </div>
-            </div>
-            <div id="fileStatus" style="margin-top:6px;font-size:11px;color:#8e8e93;">
-                Файл не загружен
-            </div>
+    <div class="topbar">
+      <div class="file-inline">
+        <div class="file-input-wrapper" style="min-width: 190px;">
+          <input type="file" id="fileInput" accept=".json" />
+          <div class="file-input-display" title="Загрузить JSON">
+            <span>📄</span><span>synonyms.json</span>
+          </div>
         </div>
-    </div>
+        <div id="fileStatus" class="status-inline">Файл не загружен</div>
+      </div>
 
-    <div class="search-box">
-        <input type="text" id="searchInput" class="search-input"
-               placeholder="🔍 Поиск по штрихкоду или названию..."
-               title="Введите штрихкод или название для фильтрации групп" disabled>
-    </div>
-
-    <div class="controls">
-        <button id="addGroupBtn" class="btn btn-primary" disabled
-                title="Добавить новую группу синонимов">
-            <span class="icon">➕</span> Добавить группу
-        </button>
-        <button id="checkConflictsBtn" class="btn btn-secondary" disabled
-                title="Проверить дубликаты штрихкодов в разных группах">
-            <span class="icon">🔍</span> Проверить конфликты
-        </button>
-        <button id="sortByNameBtn" class="btn btn-secondary" disabled
-                title="Отсортировать группы по названию товара">
-            <span class="icon">🔤</span> По имени
-        </button>
-        <button id="toggleInstructionsBtn" class="btn btn-secondary"
-                title="Показать или скрыть инструкции">
-            <span class="icon">❓</span> Инструкции
-        </button>
-        <button id="exportJsonBtn" class="btn btn-success" disabled
-                title="Скачать обновлённый JSON файл">
-            <span class="icon">💾</span> Скачать JSON
-        </button>
-        <button id="exportExcelBtn" class="btn btn-success" disabled
-                title="Скачать Excel для просмотра">
-            <span class="icon">📊</span> Скачать Excel
-        </button>
-        <button id="importExcelBtn" class="btn btn-warning" disabled
-                title="Импортировать данные из Excel (главный ШК, название, синонимы)">
-            <span class="icon">📥</span> Импорт из Excel
-        </button>
-        <button id="clearBtn" class="btn btn-danger" disabled
-                title="Очистить все данные и начать заново">
-            <span class="icon">🗑️</span> Очистить всё
-        </button>
-    </div>
-
-    <input type="file" id="excelImportInput" accept=".xlsx,.xls" style="display:none;" />
-
-    <div id="instructionsPanel" class="instructions-panel">
-        <div class="instructions-highlight">
-            Редактор управляет группами синонимов штрихкодов. Первый элемент — название товара, затем главный штрихкод и его синонимы.
-        </div>
-
-        <h3>1. Загрузка файла</h3>
-        <ul>
-            <li>Загрузите JSON файл с синонимами для редактирования.</li>
-            <li>Формат: <code>{ "главныйШК": ["Название", "синоним1", ...] }</code></li>
-        </ul>
-
-        <h3>2. Работа с группами</h3>
-        <ul>
-            <li>Название товара редактируется прямо в поле.</li>
-            <li>Синонимы добавляются через поле «Добавить синоним» и удаляются кнопкой ✕.</li>
-            <li>Группа удаляется кнопкой 🗑️.</li>
-        </ul>
-
-        <h3>3. Добавление / импорт</h3>
-        <ul>
-            <li>«Добавить группу» — ручное создание новой группы.</li>
-            <li>«Импорт из Excel» — догружает/обновляет группы из таблицы (главный ШК, название, синонимы через запятую).</li>
-        </ul>
-
-        <h3>4. Проверка конфликтов</h3>
-        <ul>
-            <li>Кнопка «Проверить конфликты» ищет штрихкоды, которые попали в несколько групп.</li>
-            <li>Конфликтные группы подсвечиваются красным.</li>
-        </ul>
-
-        <h3>5. Экспорт</h3>
-        <ul>
-            <li>«Скачать JSON» — сохраняет обновлённый файл для сравнителя.</li>
-            <li>«Скачать Excel» — экспортирует все группы для удобного просмотра и правок.</li>
-        </ul>
+      <div class="controls">
+        <button id="exportJsonBtn" class="btn btn-success" disabled title="Скачать JSON">Скачать JSON</button>
+        <button id="exportExcelBtn" class="btn btn-secondary" disabled title="Скачать Excel">Скачать Excel</button>
+        <button id="importExcelBtn" class="btn btn-secondary" title="Загрузить Excel">Загрузить Excel</button>
+        <button id="exportSelfBtn" class="btn btn-success" disabled title="Сохранить приложение (html файл)">💾 Сохранить</button>
+        <button id="clearBtn" class="btn btn-danger" disabled title="Очистить">Очистить</button>
+        <input type="file" id="excelImportInput" accept=".xlsx,.xls" style="display:none;" />
+      </div>
     </div>
 
     <div id="infoPanel" class="info-grid" style="display:none;">
-        <div class="info-card">
-            <div class="info-value" id="groupCount">0</div>
-            <div class="info-label">Групп синонимов</div>
-        </div>
-        <div class="info-card">
-            <div class="info-value" id="synonymCount">0</div>
-            <div class="info-label">Всего синонимов</div>
-        </div>
-        <div class="info-card">
-            <div class="info-value" id="barcodeCount">0</div>
-            <div class="info-label">Уникальных штрихкодов</div>
-        </div>
-        <div class="info-card">
-            <div class="info-value" id="conflictCount">0</div>
-            <div class="info-label">Конфликтов</div>
-        </div>
+      <div class="info-card">
+        <div class="info-value" id="groupCount">0</div>
+        <div class="info-label">Групп</div>
+      </div>
+      <div class="info-card">
+        <div class="info-value" id="synonymCount">0</div>
+        <div class="info-label">Синонимов</div>
+      </div>
+      <div class="info-card">
+        <div class="info-value" id="barcodeCount">0</div>
+        <div class="info-label">ШК уник.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-value" id="conflictCount">0</div>
+        <div class="info-label">Конфликтов</div>
+      </div>
     </div>
 
-    <div id="addGroupSection" class="add-group-section" style="display:none;">
-        <div class="add-group-title">➕ Добавить новую группу синонимов</div>
-        <div class="add-group-form">
-            <input type="text" id="newMainBarcode" placeholder="Главный штрихкод (например, 1234567890)" />
-            <input type="text" id="newGroupName" placeholder="Название товара" />
-            <textarea id="newSynonyms" placeholder="Синонимы штрихкодов (каждый с новой строки)"></textarea>
-            <div style="display: flex; gap: 6px;">
-                <button class="btn btn-success" onclick="saveNewGroup()">
-                    <span class="icon">✓</span> Создать группу
-                </button>
-                <button class="btn btn-secondary" onclick="cancelNewGroup()">
-                    <span class="icon">✕</span> Отмена
-                </button>
-            </div>
+    <input type="text" id="searchInput" class="search-wide" placeholder="Поиск по ШК / названию / синонимам..." disabled />
+
+    <!-- NEW GROUP -->
+    <div class="new-group">
+      <div class="rows-wrap">
+        <div class="grid">
+          <input class="inp inp-name" type="text" id="newGroupName" placeholder="Категория (название)" />
+          <input class="inp inp-mono" type="text" id="newMainBarcode" placeholder="Главный ШК" />
+          <input class="inp inp-mono" type="text" id="newSynonyms" placeholder="Синонимы через запятую" />
+          <div></div>
+          <button id="createGroupBtn" class="btn btn-success btn-disk" title="Сохранить">💾</button>
+          <button id="clearNewGroupBtn" class="btn btn-secondary btn-del" title="Сброс">Сброс</button>
         </div>
+      </div>
     </div>
 
-    <div id="groupsContainer"></div>
-</div>
+    <!-- GROUPS -->
+    <div class="rows-wrap">
+      <div id="groupsContainer"></div>
+    </div>
+  </div>
 
-<script>
+  <!-- Embedded data for self-save -->
+  <script id="embeddedData" type="application/json"></script>
+
+  <script>
+    // state
     let synonymsData = {};
     let conflicts = new Set();
-    let searchQuery = '';
-    let sortByNameAsc = true;
+    let searchQuery = "";
 
-    const fileInput = document.getElementById('fileInput');
-    const fileStatus = document.getElementById('fileStatus');
-    const searchInput = document.getElementById('searchInput');
-    const addGroupBtn = document.getElementById('addGroupBtn');
-    const checkConflictsBtn = document.getElementById('checkConflictsBtn');
-    const sortByNameBtn = document.getElementById('sortByNameBtn');
-    const toggleInstructionsBtn = document.getElementById('toggleInstructionsBtn');
-    const exportJsonBtn = document.getElementById('exportJsonBtn');
-    const exportExcelBtn = document.getElementById('exportExcelBtn');
-    const importExcelBtn = document.getElementById('importExcelBtn');
-    const excelImportInput = document.getElementById('excelImportInput');
-    const clearBtn = document.getElementById('clearBtn');
-    const instructionsPanel = document.getElementById('instructionsPanel');
-    const infoPanel = document.getElementById('infoPanel');
-    const groupsContainer = document.getElementById('groupsContainer');
-    const addGroupSection = document.getElementById('addGroupSection');
+    // DOM
+    const fileInput = document.getElementById("fileInput");
+    const fileStatus = document.getElementById("fileStatus");
+    const searchInput = document.getElementById("searchInput");
+    const exportJsonBtn = document.getElementById("exportJsonBtn");
+    const exportExcelBtn = document.getElementById("exportExcelBtn");
+    const importExcelBtn = document.getElementById("importExcelBtn");
+    const exportSelfBtn = document.getElementById("exportSelfBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const excelImportInput = document.getElementById("excelImportInput");
+    const groupsContainer = document.getElementById("groupsContainer");
+    const infoPanel = document.getElementById("infoPanel");
+    const newMainBarcodeEl = document.getElementById("newMainBarcode");
+    const newGroupNameEl = document.getElementById("newGroupName");
+    const newSynonymsEl = document.getElementById("newSynonyms");
+    const createGroupBtn = document.getElementById("createGroupBtn");
+    const clearNewGroupBtn = document.getElementById("clearNewGroupBtn");
 
-    fileInput.addEventListener('change', handleFileUpload);
-    searchInput.addEventListener('input', handleSearch);
-    addGroupBtn.addEventListener('click', showAddGroupForm);
-    checkConflictsBtn.addEventListener('click', checkConflicts);
-    sortByNameBtn.addEventListener('click', toggleSortByName);
-    toggleInstructionsBtn.addEventListener('click', toggleInstructions);
-    exportJsonBtn.addEventListener('click', exportJson);
-    exportExcelBtn.addEventListener('click', exportExcel);
-    importExcelBtn.addEventListener('click', () => excelImportInput.click());
-    excelImportInput.addEventListener('change', handleExcelImport);
-    clearBtn.addEventListener('click', clearAll);
+    // helpers
+    function normalizeBarcode(value) { return String(value ?? "").trim(); }
+    function normalizeName(value) { return String(value ?? "").trim(); }
+    function splitSynonyms(text) {
+      const raw = String(text ?? "").trim();
+      if (!raw) return [];
+      return raw.split(",").map(s => s.trim()).filter(Boolean);
+    }
+    function safeIdFrom(str) {
+      const s = String(str ?? "");
+      try {
+        const b64 = btoa(unescape(encodeURIComponent(s))).replaceAll("=", "");
+        return b64.replaceAll("+", "-").replaceAll("/", "_");
+      } catch (e) {
+        return s.replace(/[^a-zA-Z0-9_-]/g, "_");
+      }
+    }
+    function setStatusOk(text) { fileStatus.style.color = "#34c759"; fileStatus.textContent = text; }
+    function setStatusErr(text) { fileStatus.style.color = "#ff3b30"; fileStatus.textContent = text; }
+    function setStatusInfo(text) { fileStatus.style.color = "#8e8e93"; fileStatus.textContent = text; }
+    function escapeHtmlText(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+    function escapeHtmlValue(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+    function enc(s) { return encodeURIComponent(String(s ?? "")); }
+    function dec(s) { return decodeURIComponent(String(s ?? "")); }
 
-    function handleFileUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const json = JSON.parse(event.target.result);
-                synonymsData = json;
-                fileStatus.style.color = '#34c759';
-                fileStatus.textContent = `Файл загружен: ${file.name}`;
-                updateUI();
-                renderGroups();
-            } catch (err) {
-                console.error('Ошибка чтения JSON:', err);
-                fileStatus.style.color = '#ff3b30';
-                fileStatus.textContent = 'Ошибка: неверный формат JSON';
-                alert('Ошибка при чтении файла. Проверьте формат JSON.');
-            }
-        };
-        reader.onerror = () => {
-            fileStatus.style.color = '#ff3b30';
-            fileStatus.textContent = 'Ошибка чтения файла';
-            alert('Не удалось прочитать файл.');
-        };
-        reader.readAsText(file, 'utf-8');
+    function barcodeLookupUrl(barcode) {
+      const b = normalizeBarcode(barcode);
+      return "https://barcode-list.ru/barcode/RU/%D0%9F%D0%BE%D0%B8%D1%81%D0%BA.htm?barcode=" + encodeURIComponent(b);
+    }
+    function openBarcodeLookup(barcode) {
+      const url = barcodeLookupUrl(barcode);
+      const w = window.open(url, "_blank");
+      try { if (w) w.opener = null; } catch (e) {}
     }
 
-    function handleSearch(e) {
-        searchQuery = e.target.value.toLowerCase().trim();
-        renderGroups();
-    }
+    // save-as (folder picker) with fallback
+    async function saveWithDialog(blob, suggestedName, mime, ext, description) {
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur(); // важно для автосохранения по blur
+      }
 
-    function toggleInstructions() {
-        const isVisible = instructionsPanel.style.display === 'block';
-        instructionsPanel.style.display = isVisible ? 'none' : 'block';
-        if (isVisible) toggleInstructionsBtn.classList.remove('active');
-        else toggleInstructionsBtn.classList.add('active');
-    }
-
-    function toggleSortByName() {
-        sortByNameAsc = !sortByNameAsc;
-        if (sortByNameAsc) {
-            sortByNameBtn.classList.add('active');
-        } else {
-            sortByNameBtn.classList.remove('active');
+      if ("showSaveFilePicker" in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName,
+            types: [{ description, accept: { [mime]: [ext] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return; // пользователь отменил
+          console.error("Save picker error:", e);
         }
-        renderGroups();
+      }
+      saveAs(blob, suggestedName);
     }
 
-    function showAddGroupForm() {
-        addGroupSection.style.display = 'block';
-        document.getElementById('newMainBarcode').focus();
+    // embedded data
+    function tryLoadEmbeddedData() {
+      const el = document.getElementById("embeddedData");
+      if (!el) return false;
+      const txt = (el.textContent || "").trim();
+      if (!txt || txt === "{}") return false;
+      try {
+        const data = JSON.parse(txt);
+        if (data && typeof data === "object") {
+          synonymsData = data;
+          return true;
+        }
+      } catch (e) {}
+      return false;
     }
 
-    function cancelNewGroup() {
-        addGroupSection.style.display = 'none';
-        document.getElementById('newMainBarcode').value = '';
-        document.getElementById('newGroupName').value = '';
-        document.getElementById('newSynonyms').value = '';
+    // conflicts
+    function computeConflicts(data) {
+      const conflictGroups = new Set();
+      const barcodeToGroups = new Map();
+
+      for (const mainBarcode of Object.keys(data)) {
+        const arr = data[mainBarcode];
+        const all = [mainBarcode, ...(arr || []).slice(1)];
+        for (const bc of all) {
+          const b = normalizeBarcode(bc);
+          if (!b) continue;
+          if (!barcodeToGroups.has(b)) barcodeToGroups.set(b, new Set());
+          barcodeToGroups.get(b).add(mainBarcode);
+        }
+      }
+
+      for (const set of barcodeToGroups.values()) {
+        if (set.size > 1) {
+          for (const g of set) conflictGroups.add(g);
+        }
+      }
+      return conflictGroups;
+    }
+
+    function refreshDerivedState() {
+      conflicts = computeConflicts(synonymsData);
+      updateUI();
+      renderGroups();
+    }
+
+    // new group
+    function clearNewGroupInputs() {
+      newMainBarcodeEl.value = "";
+      newGroupNameEl.value = "";
+      newSynonymsEl.value = "";
+      newGroupNameEl.focus();
     }
 
     function saveNewGroup() {
-        const mainBarcode = document.getElementById('newMainBarcode').value.trim();
-        const groupName = document.getElementById('newGroupName').value.trim();
-        const synonymsText = document.getElementById('newSynonyms').value.trim();
+      const mainBarcode = normalizeBarcode(newMainBarcodeEl.value);
+      const groupName = normalizeName(newGroupNameEl.value);
+      const synonymsText = newSynonymsEl.value;
 
-        if (!mainBarcode) {
-            alert('Введите главный штрихкод');
-            return;
-        }
+      if (!mainBarcode) { alert("Введите главный штрихкод"); return; }
+      if (synonymsData[mainBarcode]) { alert("Такая группа уже существует"); return; }
 
-        if (synonymsData[mainBarcode]) {
-            alert('Группа с таким штрихкодом уже существует');
-            return;
-        }
+      const synonyms = splitSynonyms(synonymsText);
+      synonymsData[mainBarcode] = [groupName, ...synonyms];
 
-        const synonyms = synonymsText
-            .split('\n')
-            .map(s => s.trim())
-            .filter(s => s !== '');
-
-        synonymsData[mainBarcode] = [groupName || 'Без названия', ...synonyms];
-        
-        cancelNewGroup();
-        updateUI();
-        renderGroups();
+      clearNewGroupInputs();
+      refreshDerivedState();
     }
 
-    function deleteGroup(mainBarcode) {
-        if (!confirm(`Удалить группу ${mainBarcode}?`)) return;
-        delete synonymsData[mainBarcode];
-        updateUI();
-        renderGroups();
+    // row operations
+    function applyRenameAndName(oldMain, newMain, newName) {
+      const oldKey = normalizeBarcode(oldMain);
+      const newKey = normalizeBarcode(newMain);
+
+      if (!synonymsData[oldKey]) return null;
+      if (!newKey) { alert("Главный штрихкод не может быть пустым"); return null; }
+
+      let activeKey = oldKey;
+
+      if (newKey !== oldKey) {
+        if (synonymsData[newKey]) { alert("Группа с таким главным ШК уже существует"); return null; }
+        synonymsData[newKey] = synonymsData[oldKey];
+        delete synonymsData[oldKey];
+        activeKey = newKey;
+      }
+
+      synonymsData[activeKey][0] = normalizeName(newName);
+      return activeKey;
     }
 
-    function updateGroupName(mainBarcode, newName) {
-        if (synonymsData[mainBarcode]) {
-            synonymsData[mainBarcode][0] = newName;
+    function saveRowFromRowEl(rowEl, oldMain, opts) {
+      const nameEl = rowEl.querySelector('input[data-role="name"]');
+      const mainEl = rowEl.querySelector('input[data-role="main"]');
+      const newSynEl = rowEl.querySelector('input[data-role="newSyn"]');
+
+      const newName = normalizeName(nameEl ? nameEl.value : "");
+      const newMain = normalizeBarcode(mainEl ? mainEl.value : oldMain);
+      const newSyn = normalizeBarcode(newSynEl ? newSynEl.value : "");
+
+      const activeKey = applyRenameAndName(oldMain, newMain, newName);
+      if (!activeKey) return null;
+
+      if (!opts || !opts.skipNewSyn) {
+        if (newSyn) {
+          const arr = synonymsData[activeKey];
+          const existing = new Set(arr.slice(1));
+          if (!existing.has(newSyn)) arr.push(newSyn);
+          if (newSynEl) newSynEl.value = "";
         }
+      }
+
+      return activeKey;
     }
 
-    function addSynonym(mainBarcode, synonym) {
-        if (!synonym || !synonym.trim()) return;
-        synonym = synonym.trim();
-        
-        if (!synonymsData[mainBarcode]) return;
-        
-        const arr = synonymsData[mainBarcode];
-        if (arr.slice(1).includes(synonym)) {
-            alert('Такой синоним уже есть в этой группе');
-            return;
-        }
-        
-        arr.push(synonym);
-        renderGroups();
-        updateUI();
+    function deleteGroup(key) {
+      const k = normalizeBarcode(key);
+      if (!confirm(`Удалить группу ${k}?`)) return;
+      delete synonymsData[k];
+      refreshDerivedState();
     }
 
-    function removeSynonym(mainBarcode, synonym) {
-        if (!synonymsData[mainBarcode]) return;
-        
-        const arr = synonymsData[mainBarcode];
-        const index = arr.indexOf(synonym);
-        if (index > 0) {
-            arr.splice(index, 1);
-            renderGroups();
-            updateUI();
-        }
+    function removeSynonym(key, syn) {
+      const k = normalizeBarcode(key);
+      if (!synonymsData[k]) return;
+
+      const s = normalizeBarcode(syn);
+      const arr = synonymsData[k];
+      const idx = arr.indexOf(s);
+
+      if (idx >= 1) arr.splice(idx, 1);
+      refreshDerivedState();
     }
 
-    function checkConflicts() {
-        conflicts.clear();
-        const barcodeToGroups = new Map();
-        
-        Object.keys(synonymsData).forEach(mainBarcode => {
-            const arr = synonymsData[mainBarcode];
-            const barcodes = [mainBarcode, ...arr.slice(1)];
-            
-            barcodes.forEach(bc => {
-                if (!barcodeToGroups.has(bc)) {
-                    barcodeToGroups.set(bc, []);
-                }
-                barcodeToGroups.get(bc).push(mainBarcode);
-            });
-        });
-        
-        barcodeToGroups.forEach((groups, barcode) => {
-            if (groups.length > 1) {
-                groups.forEach(g => conflicts.add(g));
-            }
-        });
-        
-        updateUI();
-        renderGroups();
-        
-        if (conflicts.size > 0) {
-            alert(`Найдено конфликтов: ${conflicts.size} групп содержат дублирующиеся штрихкоды`);
-        } else {
-            alert('Конфликтов не найдено! ✓');
-        }
-    }
-
+    // render (sort by name asc always)
     function renderGroups() {
-        let groups = Object.keys(synonymsData);
-        
-        if (searchQuery) {
-            groups = groups.filter(mainBarcode => {
-                const arr = synonymsData[mainBarcode];
-                const name = arr[0] || '';
-                const synonyms = arr.slice(1);
-                
-                return mainBarcode.toLowerCase().includes(searchQuery) ||
-                       name.toLowerCase().includes(searchQuery) ||
-                       synonyms.some(s => s.toLowerCase().includes(searchQuery));
-            });
-        }
+      const keys = Object.keys(synonymsData);
 
-        if (groups.length > 0) {
-            groups.sort((a, b) => {
-                const arrA = synonymsData[a] || [];
-                const arrB = synonymsData[b] || [];
-                const nameA = (arrA[0] || '').toLowerCase();
-                const nameB = (arrB[0] || '').toLowerCase();
-
-                if (nameA < nameB) return sortByNameAsc ? -1 : 1;
-                if (nameA > nameB) return sortByNameAsc ? 1 : -1;
-                if (a < b) return -1;
-                if (a > b) return 1;
-                return 0;
-            });
-        }
-        
-        if (groups.length === 0) {
-            groupsContainer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📦</div>
-                    <h3>Нет групп синонимов</h3>
-                    <p>Загрузите JSON файл или создайте новую группу</p>
-                </div>`;
-            return;
-        }
-        
-        let html = '<div class="groups-container">';
-        
-        groups.forEach(mainBarcode => {
-            const arr = synonymsData[mainBarcode];
-            const name = arr[0] || 'Без названия';
-            const synonyms = arr.slice(1);
-            const hasConflict = conflicts.has(mainBarcode);
-            
-            html += `
-                <div class="group-card ${hasConflict ? 'has-conflict' : ''}">
-                    <div class="group-header">
-                        <div class="group-main-info">
-                            <div class="group-barcode">${mainBarcode}</div>
-                            <div class="group-name">
-                                <input type="text" 
-                                       value="${name.replace(/"/g, '&quot;')}"
-                                       onchange="updateGroupName('${mainBarcode}', this.value)"
-                                       placeholder="Название товара" />
-                            </div>
-                        </div>
-                        <div class="group-actions">
-                            <button class="group-btn group-btn-delete" 
-                                    onclick="deleteGroup('${mainBarcode}')"
-                                    title="Удалить группу">
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="synonyms-list">`;
-            
-            synonyms.forEach(syn => {
-                html += `
-                    <div class="synonym-tag ${hasConflict ? 'conflict' : ''}">
-                        ${syn}
-                        <button class="synonym-remove" 
-                                onclick="removeSynonym('${mainBarcode}', '${syn}')"
-                                title="Удалить синоним">
-                            ✕
-                        </button>
-                    </div>`;
-            });
-            
-            html += `</div>
-                    
-                    <div class="add-synonym">
-                        <input type="text" 
-                               id="syn-input-${mainBarcode}"
-                               placeholder="Добавить синоним..."
-                               onkeypress="if(event.key==='Enter'){addSynonym('${mainBarcode}', this.value); this.value='';}" />
-                        <button onclick="const inp=document.getElementById('syn-input-${mainBarcode}'); addSynonym('${mainBarcode}', inp.value); inp.value='';">
-                            ➕ Добавить
-                        </button>
-                    </div>`;
-            
-            if (hasConflict) {
-                html += `<div class="conflict-warning">⚠️ Эта группа содержит дублирующиеся штрихкоды</div>`;
-            }
-            
-            html += `</div>`;
-        });
-        
-        html += '</div>';
-        groupsContainer.innerHTML = html;
-    }
-
-    function updateUI() {
-        const hasData = Object.keys(synonymsData).length > 0;
-        
-        searchInput.disabled = !hasData;
-        addGroupBtn.disabled = !hasData;
-        checkConflictsBtn.disabled = !hasData;
-        sortByNameBtn.disabled = !hasData;
-        exportJsonBtn.disabled = !hasData;
-        exportExcelBtn.disabled = !hasData;
-        importExcelBtn.disabled = !hasData;
-        clearBtn.disabled = !hasData;
-        
-        if (hasData) {
-            infoPanel.style.display = 'grid';
-            
-            const groupCount = Object.keys(synonymsData).length;
-            let synonymCount = 0;
-            const allBarcodes = new Set();
-            
-            Object.keys(synonymsData).forEach(mainBarcode => {
-                allBarcodes.add(mainBarcode);
-                const arr = synonymsData[mainBarcode];
-                const synonyms = arr.slice(1);
-                synonymCount += synonyms.length;
-                synonyms.forEach(s => allBarcodes.add(s));
-            });
-            
-            document.getElementById('groupCount').textContent = groupCount;
-            document.getElementById('synonymCount').textContent = synonymCount;
-            document.getElementById('barcodeCount').textContent = allBarcodes.size;
-            document.getElementById('conflictCount').textContent = conflicts.size;
-        } else {
-            infoPanel.style.display = 'none';
-        }
-    }
-
-    function exportJson() {
-        const json = JSON.stringify(synonymsData, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const fileName = `synonyms-${yyyy}-${mm}-${dd}.json`;
-        saveAs(blob, fileName);
-    }
-
-    async function exportExcel() {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Синонимы');
-        
-        worksheet.addRow(['Главный штрихкод', 'Название товара', 'Синонимы (через запятую)']);
-        
-        Object.keys(synonymsData).forEach(mainBarcode => {
-            const arr = synonymsData[mainBarcode];
-            const name = arr[0] || '';
-            const synonyms = arr.slice(1).join(', ');
-            worksheet.addRow([mainBarcode, name, synonyms]);
-        });
-        
-        worksheet.columns.forEach((column, idx) => {
-            if (idx === 0) column.width = 20;
-            else if (idx === 1) column.width = 40;
-            else column.width = 60;
-        });
-        
-        const headerRow = worksheet.getRow(1);
-        headerRow.font = { bold: true };
-        headerRow.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFE0E0E0' } };
-        
-        worksheet.eachRow((row) => {
-            row.eachCell((cell) => {
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
-                };
-            });
-        });
-        
-        const buffer = await workbook.xlsx.writeBuffer();
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const fileName = `synonyms-${yyyy}-${mm}-${dd}.xlsx`;
-        const blob = new Blob([buffer], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        });
-        saveAs(blob, fileName);
-    }
-
-    function handleExcelImport(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-                if (!rows || rows.length < 2) {
-                    alert('В Excel нет данных для импорта');
-                    return;
-                }
-
-                rows.slice(1).forEach(row => {
-                    const mainBarcode = String(row[0] || '').trim();
-                    const name = String(row[1] || '').trim();
-                    const synonymsRaw = String(row[2] || '').trim();
-
-                    if (!mainBarcode) return;
-
-                    const synonyms = synonymsRaw
-                        ? synonymsRaw
-                            .split(/[,;]/)
-                            .map(s => s.trim())
-                            .filter(s => s !== '')
-                        : [];
-
-                    if (!synonymsData[mainBarcode]) {
-                        synonymsData[mainBarcode] = [name || 'Без названия', ...synonyms];
-                    } else {
-                        const arr = synonymsData[mainBarcode];
-                        if (name) {
-                            arr[0] = name;
-                        }
-                        const existing = new Set(arr.slice(1));
-                        synonyms.forEach(s => {
-                            if (!existing.has(s)) {
-                                arr.push(s);
-                                existing.add(s);
-                            }
-                        });
-                    }
-                });
-
-                alert('Импорт из Excel выполнен');
-                updateUI();
-                renderGroups();
-            } catch (err) {
-                console.error('Ошибка импорта Excel:', err);
-                alert('Не удалось импортировать Excel. Проверьте формат файла.');
-            } finally {
-                excelImportInput.value = '';
-            }
-        };
-        reader.onerror = () => {
-            alert('Ошибка чтения Excel-файла');
-            excelImportInput.value = '';
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    function clearAll() {
-        if (!confirm('Очистить все данные? Это действие нельзя отменить.')) return;
-        
-        synonymsData = {};
-        conflicts.clear();
-        searchQuery = '';
-        sortByNameAsc = true;
-        
-        fileInput.value = '';
-        excelImportInput.value = '';
-        searchInput.value = '';
-        fileStatus.style.color = '#8e8e93';
-        fileStatus.textContent = 'Файл не загружен';
-        sortByNameBtn.classList.remove('active');
-        
+      if (keys.length === 0) {
         groupsContainer.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📦</div>
-                <h3>Нет групп синонимов</h3>
-                <p>Загрузите JSON файл или создайте новую группу</p>
-            </div>`;
-        
-        updateUI();
+          <div class="empty-state">
+            <div class="empty-state-icon">📄</div>
+            <h3>Пусто</h3>
+            <p>Загрузите JSON или создайте новую группу.</p>
+          </div>`;
+        return;
+      }
+
+      let groups = keys;
+
+      if (searchQuery) {
+        groups = groups.filter(mainBarcode => {
+          const arr = synonymsData[mainBarcode] || [""];
+          const name = String(arr[0] || "").toLowerCase();
+          const syns = (arr.slice(1) || []).map(s => String(s).toLowerCase());
+          return (
+            String(mainBarcode).toLowerCase().includes(searchQuery) ||
+            name.includes(searchQuery) ||
+            syns.some(s => s.includes(searchQuery))
+          );
+        });
+      }
+
+      groups.sort((a, b) => {
+        const nameA = String((synonymsData[a] || [""])[0]).toLowerCase();
+        const nameB = String((synonymsData[b] || [""])[0]).toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        if (a < b) return -1;
+        if (a > b) return 1;
+        return 0;
+      });
+
+      if (groups.length === 0) {
+        groupsContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔎</div>
+            <h3>Ничего не найдено</h3>
+            <p>Попробуйте изменить запрос поиска.</p>
+          </div>`;
+        return;
+      }
+
+      let html = "";
+      for (const mainBarcode of groups) {
+        const arr = synonymsData[mainBarcode] || [""];
+        const name = arr[0] || "";
+        const syns = arr.slice(1) || [];
+        const hasConflict = conflicts.has(mainBarcode);
+        const safe = safeIdFrom(mainBarcode);
+
+        html += `
+          <div class="row ${hasConflict ? "has-conflict" : ""}" id="row-${safe}" data-main="${enc(mainBarcode)}">
+            <div class="grid">
+              <input class="inp inp-name" type="text" data-role="name" value="${escapeHtmlValue(name)}" placeholder="Категория (название)" />
+
+              <div class="main-cell">
+                <input class="inp inp-mono" type="text" data-role="main" value="${escapeHtmlValue(mainBarcode)}" placeholder="Главный ШК" />
+                <a class="loupe-link" href="${escapeHtmlValue(barcodeLookupUrl(mainBarcode))}"
+                   target="_blank" rel="noopener"
+                   data-action="openLookupMain"
+                   title="Открыть на barcode-list.ru">🔍</a>
+              </div>
+
+              <div class="synonyms-cell" title="${escapeHtmlValue(syns.join(", "))}">
+                ${syns.map(syn => `
+                  <span class="synonym-pill syn-link"
+                        role="link"
+                        tabindex="0"
+                        data-action="openLookupSyn"
+                        data-barcode="${enc(syn)}"
+                        title="Открыть на barcode-list.ru">
+                    ${escapeHtmlText(syn)}
+                    <button class="synonym-remove" type="button"
+                      data-action="removeSyn"
+                      data-main="${enc(mainBarcode)}"
+                      data-syn="${enc(syn)}"
+                      title="Удалить">×</button>
+                  </span>`).join("")}
+              </div>
+
+              <input class="inp inp-mono" type="text" data-role="newSyn" placeholder="Добавить синоним" />
+              <button class="btn btn-success btn-disk" type="button" data-action="saveRow" data-main="${enc(mainBarcode)}" title="Сохранить">💾</button>
+              <button class="btn btn-danger btn-del" type="button" data-action="deleteGroup" data-main="${enc(mainBarcode)}" title="Удалить">Удалить</button>
+            </div>
+          </div>`;
+      }
+
+      groupsContainer.innerHTML = html;
     }
 
-    window.deleteGroup = deleteGroup;
-    window.updateGroupName = updateGroupName;
-    window.addSynonym = addSynonym;
-    window.removeSynonym = removeSynonym;
-    window.saveNewGroup = saveNewGroup;
-    window.cancelNewGroup = cancelNewGroup;
-</script>
+    // delegated events (click)
+    groupsContainer.addEventListener("click", (e) => {
+      // 1) remove synonym (важно: чтобы не срабатывало открытие по клику на pill)
+      const rmBtn = e.target.closest('button[data-action="removeSyn"]');
+      if (rmBtn) {
+        const main = dec(rmBtn.dataset.main);
+        const rowEl = rmBtn.closest(".row");
+        if (!rowEl) return;
+
+        const activeKey = saveRowFromRowEl(rowEl, main, { skipNewSyn: true });
+        if (!activeKey) return;
+
+        const syn = dec(rmBtn.dataset.syn);
+        removeSynonym(activeKey, syn);
+        return;
+      }
+
+      // 2) save/delete
+      const btn = e.target.closest("button[data-action]");
+      if (btn) {
+        const action = btn.dataset.action;
+        const main = dec(btn.dataset.main);
+        const rowEl = btn.closest(".row");
+        if (!rowEl) return;
+
+        if (action === "saveRow") {
+          const activeKey = saveRowFromRowEl(rowEl, main, { skipNewSyn: false });
+          if (activeKey) refreshDerivedState();
+          return;
+        }
+
+        if (action === "deleteGroup") {
+          const activeKey = saveRowFromRowEl(rowEl, main, { skipNewSyn: true });
+          if (!activeKey) return;
+          deleteGroup(activeKey);
+          return;
+        }
+      }
+
+      // 3) open lookup by loupe (main barcode)
+      const loupe = e.target.closest('a[data-action="openLookupMain"]');
+      if (loupe) {
+        e.preventDefault();
+        const rowEl = loupe.closest(".row");
+        if (!rowEl) return;
+        const mainInp = rowEl.querySelector('input[data-role="main"]');
+        const bc = normalizeBarcode(mainInp ? mainInp.value : dec(rowEl.dataset.main));
+        if (!bc) return;
+        openBarcodeLookup(bc);
+        return;
+      }
+
+      // 4) open lookup by synonym pill click
+      const synPill = e.target.closest('[data-action="openLookupSyn"]');
+      if (synPill) {
+        // если кликнули по кнопке удаления — уже обработали выше
+        const bc = normalizeBarcode(dec(synPill.dataset.barcode));
+        if (!bc) return;
+        openBarcodeLookup(bc);
+        return;
+      }
+    });
+
+    // open lookup from synonym pill by keyboard
+    groupsContainer.addEventListener("keydown", (e) => {
+      const synPill = e.target.closest('[data-action="openLookupSyn"]');
+      if (synPill && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        const bc = normalizeBarcode(dec(synPill.dataset.barcode));
+        if (!bc) return;
+        openBarcodeLookup(bc);
+        return;
+      }
+
+      const inp = e.target.closest('input[data-role="newSyn"]');
+      if (!inp) return;
+      if (e.key !== "Enter") return;
+
+      e.preventDefault();
+      const rowEl = inp.closest(".row");
+      if (!rowEl) return;
+
+      const main = dec(rowEl.dataset.main);
+      const activeKey = saveRowFromRowEl(rowEl, main, { skipNewSyn: false });
+      if (activeKey) refreshDerivedState();
+    });
+
+    // AUTOSAVE (name/main/newSyn)
+    const autosaveTimers = new WeakMap();
+    function debouncePerRow(rowEl, fn, delay) {
+      if (!rowEl) return;
+      if (autosaveTimers.has(rowEl)) clearTimeout(autosaveTimers.get(rowEl));
+      const t = setTimeout(fn, delay);
+      autosaveTimers.set(rowEl, t);
+    }
+
+    // name: autosave on typing (без перерендера, чтобы не сбивать курсор/сортировку)
+    groupsContainer.addEventListener("input", (e) => {
+      const nameInp = e.target.closest('input[data-role="name"]');
+      if (!nameInp) return;
+
+      const rowEl = nameInp.closest(".row");
+      if (!rowEl) return;
+
+      const main = normalizeBarcode(dec(rowEl.dataset.main));
+      if (!synonymsData[main]) return;
+
+      debouncePerRow(rowEl, () => {
+        if (!synonymsData[main]) return;
+        synonymsData[main][0] = normalizeName(nameInp.value);
+      }, 250);
+    });
+
+    // main barcode: autosave on blur or Enter (с перерисовкой/пересчетом)
+    groupsContainer.addEventListener("keydown", (e) => {
+      const mainInp = e.target.closest('input[data-role="main"]');
+      if (!mainInp) return;
+      if (e.key !== "Enter") return;
+
+      e.preventDefault();
+      mainInp.blur(); // blur -> autosave
+    });
+
+    // blur handlers (capture)
+    groupsContainer.addEventListener("blur", (e) => {
+      const mainInp = e.target.closest('input[data-role="main"]');
+      if (mainInp) {
+        const rowEl = mainInp.closest(".row");
+        if (!rowEl) return;
+
+        const oldMain = dec(rowEl.dataset.main);
+        const activeKey = saveRowFromRowEl(rowEl, oldMain, { skipNewSyn: true });
+        if (activeKey) refreshDerivedState();
+        return;
+      }
+
+      const newSynInp = e.target.closest('input[data-role="newSyn"]');
+      if (newSynInp) {
+        const rowEl = newSynInp.closest(".row");
+        if (!rowEl) return;
+
+        const v = normalizeBarcode(newSynInp.value);
+        if (!v) return;
+
+        const oldMain = dec(rowEl.dataset.main);
+        const activeKey = saveRowFromRowEl(rowEl, oldMain, { skipNewSyn: false });
+        if (activeKey) refreshDerivedState();
+        return;
+      }
+    }, true);
+
+    // UI
+    function updateUI() {
+      const hasData = synonymsData && typeof synonymsData === "object" && Object.keys(synonymsData).length > 0;
+
+      searchInput.disabled = !hasData;
+      exportJsonBtn.disabled = !hasData;
+      exportExcelBtn.disabled = !hasData;
+      importExcelBtn.disabled = false;
+      exportSelfBtn.disabled = !hasData;
+      clearBtn.disabled = !hasData;
+
+      if (!hasData) {
+        infoPanel.style.display = "none";
+        document.getElementById("groupCount").textContent = "0";
+        document.getElementById("synonymCount").textContent = "0";
+        document.getElementById("barcodeCount").textContent = "0";
+        document.getElementById("conflictCount").textContent = "0";
+        return;
+      }
+
+      infoPanel.style.display = "grid";
+
+      const groupCount = Object.keys(synonymsData).length;
+      let synonymCount = 0;
+      const allBarcodes = new Set();
+
+      for (const mainBarcode of Object.keys(synonymsData)) {
+        allBarcodes.add(mainBarcode);
+        const a = synonymsData[mainBarcode] || [""];
+        const s = a.slice(1) || [];
+        synonymCount += s.length;
+        for (const x of s) allBarcodes.add(x);
+      }
+
+      document.getElementById("groupCount").textContent = String(groupCount);
+      document.getElementById("synonymCount").textContent = String(synonymCount);
+      document.getElementById("barcodeCount").textContent = String(allBarcodes.size);
+      document.getElementById("conflictCount").textContent = String(conflicts.size);
+    }
+
+    // export JSON
+    async function exportJson() {
+      const json = JSON.stringify(synonymsData, null, 2);
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+
+      await saveWithDialog(
+        blob,
+        `synonyms-${yyyy}-${mm}-${dd}.json`,
+        "application/json",
+        ".json",
+        "JSON"
+      );
+    }
+
+    // export Excel
+    async function exportExcel() {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Synonyms");
+
+      worksheet.addRow(["Главный ШК", "Категория", "Синонимы"]);
+      Object.keys(synonymsData).forEach(mainBarcode => {
+        const arr = synonymsData[mainBarcode] || [""];
+        const name = arr[0] || "";
+        const syns = (arr.slice(1) || []).join(", ");
+        worksheet.addRow([mainBarcode, name, syns]);
+      });
+
+      worksheet.columns.forEach((column, idx) => {
+        if (idx === 0) column.width = 22;
+        else if (idx === 1) column.width = 40;
+        else column.width = 60;
+      });
+
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      worksheet.eachRow(row => {
+        row.eachCell(cell => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+          };
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+
+      await saveWithDialog(
+        blob,
+        `synonyms-${yyyy}-${mm}-${dd}.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xlsx",
+        "Excel"
+      );
+    }
+
+    // import Excel
+    function handleExcelImport(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+          if (!rows || rows.length < 2) {
+            alert("Excel пустой или не содержит данных.");
+            return;
+          }
+
+          rows.slice(1).forEach(row => {
+            const mainBarcode = normalizeBarcode(row?.[0]);
+            const name = normalizeName(row?.[1]);
+            const synonymsRaw = String(row?.[2] ?? "").trim();
+            if (!mainBarcode) return;
+
+            const syns = synonymsRaw ? synonymsRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+            if (!synonymsData[mainBarcode]) {
+              synonymsData[mainBarcode] = [name, ...syns];
+              return;
+            }
+
+            const arr = synonymsData[mainBarcode];
+            if (name) arr[0] = name;
+
+            const existing = new Set(arr.slice(1));
+            syns.forEach(s => {
+              if (!existing.has(s)) {
+                arr.push(s);
+                existing.add(s);
+              }
+            });
+          });
+
+          alert("Импорт Excel завершён.");
+          refreshDerivedState();
+        } catch (err) {
+          console.error("Ошибка импорта Excel:", err);
+          alert("Ошибка импорта Excel. Проверьте формат файла.");
+        } finally {
+          excelImportInput.value = "";
+        }
+      };
+
+      reader.onerror = () => {
+        alert("Ошибка чтения Excel-файла.");
+        excelImportInput.value = "";
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // self-save HTML
+    async function exportSelfHtml() {
+      if (!synonymsData || Object.keys(synonymsData).length === 0) {
+        alert("Нет данных для сохранения.");
+        return;
+      }
+
+      const el = document.getElementById("embeddedData");
+      if (!el) {
+        alert("Не найден блок embeddedData.");
+        return;
+      }
+
+      const json = JSON.stringify(synonymsData, null, 2).replace(/<\/script/gi, "<\\/script");
+      el.textContent = json;
+
+      const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+
+      await saveWithDialog(
+        blob,
+        "sinonims2.html",
+        "text/html",
+        ".html",
+        "HTML"
+      );
+    }
+
+    // clear
+    function clearAll() {
+      if (!confirm("Очистить всё?")) return;
+      synonymsData = {};
+      conflicts = new Set();
+      searchQuery = "";
+      fileInput.value = "";
+      excelImportInput.value = "";
+      searchInput.value = "";
+      setStatusInfo("Файл не загружен");
+      clearNewGroupInputs();
+      refreshDerivedState();
+    }
+
+    // wiring
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target.result);
+          if (!json || typeof json !== "object") throw new Error("JSON invalid");
+
+          synonymsData = json;
+          searchQuery = (searchInput.value || "").toLowerCase().trim();
+          setStatusOk(file.name);
+          refreshDerivedState();
+        } catch (err) {
+          console.error("Ошибка JSON:", err);
+          setStatusErr("Ошибка JSON");
+          alert("Ошибка. Проверьте JSON-файл.");
+        }
+      };
+
+      reader.onerror = () => {
+        setStatusErr("Ошибка чтения");
+        alert("Ошибка чтения файла.");
+      };
+
+      reader.readAsText(file, "utf-8");
+    });
+
+    searchInput.addEventListener("input", (e) => {
+      searchQuery = (e.target.value || "").toLowerCase().trim();
+      renderGroups();
+    });
+
+    exportJsonBtn.addEventListener("click", exportJson);
+    exportExcelBtn.addEventListener("click", exportExcel);
+    importExcelBtn.addEventListener("click", () => excelImportInput.click());
+    excelImportInput.addEventListener("change", handleExcelImport);
+    exportSelfBtn.addEventListener("click", exportSelfHtml);
+    clearBtn.addEventListener("click", clearAll);
+
+    createGroupBtn.addEventListener("click", saveNewGroup);
+    clearNewGroupBtn.addEventListener("click", clearNewGroupInputs);
+
+    [newGroupNameEl, newMainBarcodeEl, newSynonymsEl].forEach(el => {
+      el.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveNewGroup();
+        }
+      });
+    });
+
+    // init
+    function init() {
+      const loaded = tryLoadEmbeddedData();
+      if (loaded) setStatusOk("Загружено из HTML");
+      else setStatusInfo("Файл не загружен");
+      refreshDerivedState();
+    }
+    init();
+  </script>
 </body>
 </html>
