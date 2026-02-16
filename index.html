@@ -284,78 +284,91 @@
     .empty-state-icon { font-size: 44px; margin-bottom: 10px; }
     .empty-state h3 { font-size: 16px; font-weight: 900; margin-bottom: 6px; color: #1c1c1e; }
     .empty-state p { font-size: 13px; }
+	:root { --global-nav-h: 52px; }
+
+.global-nav{
+  position: sticky;
+  top: 0;
+  z-index: 5000;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.global-nav__inner{
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.global-nav__brand{
+  text-decoration: none;
+  font-weight: 800;
+  color: #1c1c1e;
+  white-space: nowrap;
+}
+
+.global-nav__links{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.global-nav__link{
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 650;
+  color: #007aff;
+  background: rgba(0,122,255,0.08);
+  border: 1px solid rgba(0,122,255,0.18);
+  padding: 6px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: transform .12s ease, background .12s ease;
+}
+
+.global-nav__link:hover{
+  transform: translateY(-1px);
+  background: rgba(0,122,255,0.14);
+}
+
+.global-nav__link.is-active{
+  color: #fff;
+  background: #007aff;
+  border-color: #007aff;
+}
+
   </style>
 </head>
 
 <body>
-<!-- Навигационная панель -->
-<style>
-.app-navigation {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
+<header class="global-nav">
+  <div class="global-nav__inner">
+    <a class="global-nav__brand" href="https://erofly83-arch.github.io/pricematcher/">
+      Навигатор
+    </a>
 
-.nav-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 0;
-}
-
-.nav-tab {
-    flex: 1;
-    padding: 15px 20px;
-    text-align: center;
-    text-decoration: none;
-    color: rgba(255,255,255,0.8);
-    font-weight: 500;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    border-bottom: 3px solid transparent;
-    background: transparent;
-}
-
-.nav-tab:hover {
-    background: rgba(255,255,255,0.1);
-    color: white;
-}
-
-.nav-tab.active {
-    color: white;
-    border-bottom-color: white;
-    background: rgba(255,255,255,0.15);
-}
-
-@media (max-width: 768px) {
-    .nav-tab {
-        padding: 12px 10px;
-        font-size: 14px;
-    }
-}
-</style>
-
-<nav class="app-navigation">
-    <div class="nav-container">
-        <a href="https://erofly83-arch.github.io/pricematcher/" class="nav-tab" id="nav-matcher">📊 Сравнение цен</a>
-        <a href="https://erofly83-arch.github.io/obrezatel/" class="nav-tab" id="nav-cutter">📋 Обработка таблиц</a>
-        <a href="https://erofly83-arch.github.io/synonyms/" class="nav-tab" id="nav-sinonims">🔗 Синонимы</a>
-    </div>
-</nav>
-
-<script>
-// Определяем активную вкладку
-(function() {
-    const currentPage = 'sinonims';
-    const activeTab = document.getElementById('nav-' + currentPage);
-    if (activeTab) {
-        activeTab.classList.add('active');
-    }
-})();
-</script>
+    <nav class="global-nav__links" aria-label="Навигация по приложениям">
+      <a class="global-nav__link" href="https://erofly83-arch.github.io/synonyms/" data-match="/synonyms/">
+        Редактор JSON
+      </a>
+      <a class="global-nav__link" href="https://erofly83-arch.github.io/pricematcher/" data-match="/pricematcher/">
+        Мониторинг
+      </a>
+      <a class="global-nav__link" href="https://erofly83-arch.github.io/obrezatel/" data-match="/obrezatel/">
+        Обрезатель
+      </a>
+      <a class="global-nav__link" href="https://erofly83-arch.github.io/sininimfinder/" data-match="/sininimfinder/">
+        Поиск синонимов
+      </a>
+    </nav>
+  </div>
+</header>
 
   <div class="container">
     <h1>🔗 Редактор синонимов штрихкодов</h1>
@@ -1179,5 +1192,17 @@
     }
     init();
   </script>
+  <script>
+(function(){
+  const href = location.href;
+  document.querySelectorAll('.global-nav__link').forEach(a => {
+    const m = a.getAttribute('data-match') || '';
+    if (m && href.includes(m)) a.classList.add('is-active');
+    // запасной вариант: если совпадает дом+путь целиком
+    if (!m && href.startsWith(a.href)) a.classList.add('is-active');
+  });
+})();
+</script>
+
 </body>
 </html>
